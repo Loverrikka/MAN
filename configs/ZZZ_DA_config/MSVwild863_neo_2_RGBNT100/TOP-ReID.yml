@@ -1,0 +1,61 @@
+MODEL:
+  VehicleMAE: True
+  PRETRAIN_CHOICE: 'imagenet'
+  PRETRAIN_PATH_T: '/data/MAN/pretrained/vitb_16_224_21k.pth'
+  TRANSFORMER_TYPE: 'vit_base_patch16_224'
+  STRIDE_SIZE: [ 16, 16 ]
+  SIE_CAMERA: False
+  RE: 0
+  RE_LAYER: 1
+  DIRECT: 0
+  BASE: 20
+
+
+INPUT:
+  SIZE_TRAIN: [ 256, 128 ]
+  SIZE_TEST: [ 256, 128 ]
+  PROB: 0.5 # random horizontal flip
+  RE_PROB: 0.5 # random erasing
+  PADDING: 10
+DATALOADER:
+  SAMPLER: 'softmax_triplet'
+
+DATASETS:
+  NAMES: ('MSVwild863_neo')
+  ROOT_DIR: '/data/MAN/datasets/'
+  TYPE : 'Vehicle'
+
+TARGET_DATASETS:
+  NAMES: ('RGBNT100')
+  ROOT_DIR: '/data/MAN/datasets/'
+
+SOLVER:
+  OPTIMIZER_NAME: 'Adam' # SGD or Adam
+  MAX_EPOCHS: 50
+  BASE_LR: 0.00035 # 0.009 or 0.00035
+  WARMUP_ITERS: 10
+  IMS_PER_BATCH: 32 # 16
+  LOG_PERIOD : 100
+
+TEST:
+  IMS_PER_BATCH: 128
+  RE_RANKING: 'no'
+  WEIGHT: ''
+  NECK_FEAT: 'before'
+  FEAT_NORM: 'yes'
+  MISS: 'nothing'
+
+dataloader_iter: False
+iters : 600 # 600
+kmeans_class: 100 # clip :70 # else:  100
+
+
+MMT:
+ arch: 'resnet50' # resnet50_idm or resnet50
+ features: 0
+ dropout: 0
+ alpha: 0.999
+ ce_soft_weight: 0.5
+ tri_soft_weight: 0.8
+ init_1: '/data/MAN/pretrained/MSVwild863_neo/MMT/MSVwild863_neo_1_best.pth'
+ init_2: '/data/MAN/pretrained/MSVwild863_neo/MMT/MSVwild863_neo_2_best.pth'

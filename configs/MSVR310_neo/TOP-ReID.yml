@@ -1,0 +1,47 @@
+MODEL:
+  PRETRAIN_CHOICE: 'imagenet'
+  PRETRAIN_PATH_T: '/data/MAN/pretrained/vitb_16_224_21k.pth'
+  TRANSFORMER_TYPE: 'vit_base_patch16_224'
+  STRIDE_SIZE: [ 16, 16 ]
+  SIE_CAMERA: False
+  RE: 0
+  RE_LAYER: 1
+  DIRECT: 0
+  BASE: 3
+    
+INPUT:
+  SIZE_TRAIN: [ 256, 128 ]
+  SIZE_TEST: [ 256, 128 ]
+  PROB: 0.5 # random horizontal flip
+  RE_PROB: 0.5 # random erasing
+  PADDING: 10
+DATALOADER:
+  SAMPLER: 'softmax_triplet'
+DATASETS:
+  NAMES: ('MSVR310_neo')
+  ROOT_DIR: '/data/MAN/datasets/'
+  TYPE: 'Vehicle'
+
+TARGET_DATASETS:
+  NAMES: ('MSVR310_neo')
+  ROOT_DIR: '/data/MAN/datasets/'
+
+SOLVER:
+  IMS_PER_BATCH: 32 #32
+  OPTIMIZER_NAME: 'SGD'
+  MAX_EPOCHS: 1000 # Here we follow the setting CCNet
+  BASE_LR: 0.001   # Here we use a smaller learning rate
+  WARMUP_ITERS: 100
+  SEED: 1
+TEST:
+  RE_RANKING: 'no'
+  WEIGHT: ''
+  NECK_FEAT: 'before'
+  FEAT_NORM: 'yes'
+  MISS: 'nothing'
+
+OUTPUT_DIR : [
+    '/data/MAN/output/MSVR310_neo'
+    ]
+
+dataloader_iter: False

@@ -1,0 +1,270 @@
+from PIL import Image, ImageFile
+
+from torch.utils.data import Dataset
+import os.path as osp
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+
+def read_image(img_list):
+    """Keep reading image until succeed.
+    This can avoid IOError incurred by heavy IO process."""
+    if type(img_list) == type("This is a str"):
+        img_path = img_list
+        got_img = False
+        if not osp.exists(img_path):
+            raise IOError("{} does not exist".format(img_path))
+        while not got_img:
+            try:
+                img = Image.open(img_path).convert('RGB')
+                RGB = img.crop((0, 0, 256, 128))
+                NI = img.crop((256, 0, 512, 128))
+                TI = img.crop((512, 0, 768, 128))
+                img3 = [RGB, NI, TI]
+                got_img = True
+            except IOError:
+                print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
+                pass
+    else:
+        img3 = []
+        for i in img_list:
+            img_path = i
+            got_img = False
+            if not osp.exists(img_path):
+                raise IOError("{} does not exist".format(img_path))
+            while not got_img:
+                try:
+                    img = Image.open(img_path).convert('RGB')
+                    img3.append(img)
+                    got_img = True
+                except IOError:
+                    print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
+                    pass
+    return img3
+
+
+class BaseDataset(object):
+    """
+    Base class of reid dataset
+    """
+
+    def get_imagedata_info(self, data):
+        pids, cams, tracks = [], [], []
+
+        for _, pid, camid, trackid in data:
+            pids += [pid]
+            cams += [camid]
+            tracks += [trackid]
+        pids = set(pids)
+        cams = set(cams)
+        tracks = set(tracks)
+        num_pids = len(pids)
+        num_cams = len(cams)
+        num_imgs = len(data)
+        num_views = len(tracks)
+        return num_pids, num_imgs, num_cams, num_views
+
+    def print_dataset_statistics(self):
+        raise NotImplementedError
+
+
+class BaseImageDataset(BaseDataset):
+    """
+    Base class of image reid dataset
+    """
+
+    def print_dataset_statistics(self, train, query, gallery):
+        num_train_pids, num_train_imgs, num_train_cams, num_train_views = self.get_imagedata_info(train)
+        num_query_pids, num_query_imgs, num_query_cams, num_train_views = self.get_imagedata_info(query)
+        num_gallery_pids, num_gallery_imgs, num_gallery_cams, num_train_views = self.get_imagedata_info(gallery)
+
+        print("Dataset statistics:")
+        print("  ----------------------------------------")
+        print("  subset   | # ids | # images | # cameras")
+        print("  ----------------------------------------")
+        print("  train    | {:5d} | {:8d} | {:9d}".format(num_train_pids, num_train_imgs, num_train_cams))
+        print("  query    | {:5d} | {:8d} | {:9d}".format(num_query_pids, num_query_imgs, num_query_cams))
+        print("  gallery  | {:5d} | {:8d} | {:9d}".format(num_gallery_pids, num_gallery_imgs, num_gallery_cams))
+        print("  ----------------------------------------")
+
+
+class ImageDataset(Dataset):
+    def __init__(self, dataset, transform=None, mutual= False):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, trackid = self.dataset[index]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            
+        # if type(img_path) == type("This is a str"):
+        #     return img, pid, camid, trackid, img_path.split('/')[-1]
+        # else:
+        #     return img, pid, camid, trackid, img_path[0].split('/')[-1]
+        if type(img_path) == type("This is a str"):
+            return img, pid, camid, trackid, img_path
+        else:
+            return img, pid, camid, trackid, img_path[0]
+        
+class ImageDataset_MMT(Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, trackid = self.dataset[index]
+        img3 = read_image(img_path)
+        img3_c = img3.copy()
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            img1 = [self.transform(img) for img in img3_c]
+
+        # if type(img_path) == type("This is a str"):
+        #     return img, pid, camid, trackid, img_path.split('/')[-1]
+        # else:
+        #     return img, pid, camid, trackid, img_path[0].split('/')[-1]
+        if type(img_path) == type("This is a str"):
+            return img, img1, pid, camid, trackid, img_path
+        else:
+            return img, img1, pid, camid, trackid, img_path[0]
+        
+class ImageDataset_spcl(Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, trackid = self.dataset[index]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+
+        # if type(img_path) == type("This is a str"):
+        #     return img, pid, camid, trackid, img_path.split('/')[-1]
+        # else:
+        #     return img, pid, camid, trackid, img_path[0].split('/')[-1]
+        if type(img_path) == type("This is a str"):
+            return img, img_path, pid, camid, trackid, index
+        else:
+            return img, img_path[0], pid, camid, trackid, index
+        
+class ImageDataset_w_str(Dataset):
+    def __init__(self, dataset, transform_w=None, transform_str=None, mutual= False):
+        self.dataset = dataset
+        self.transform_w = transform_w
+        self.transform_str = transform_str
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, trackid = self.dataset[index]
+        img3 = read_image(img_path)
+
+        if self.transform_w is not None:
+            img1 = [self.transform_w(img) for img in img3]
+            
+        if self.transform_str is not None:
+            img2 = [self.transform_str(img) for img in img3]
+        # if type(img_path) == type("This is a str"):
+        #     return img, pid, camid, trackid, img_path.split('/')[-1]
+        # else:
+        #     return img, pid, camid, trackid, img_path[0].split('/')[-1]
+        if type(img_path) == type("This is a str"):
+            return img1, img2, pid, camid, trackid, img_path
+        else:
+            return img1, img2, pid, camid, trackid, img_path[0]
+        
+        
+class ImageDataset(Dataset):
+    def __init__(self, dataset, transform=None, mutual= False):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, trackid = self.dataset[index]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            
+        # if type(img_path) == type("This is a str"):
+        #     return img, pid, camid, trackid, img_path.split('/')[-1]
+        # else:
+        #     return img, pid, camid, trackid, img_path[0].split('/')[-1]
+        if type(img_path) == type("This is a str"):
+            return img, pid, camid, trackid, img_path
+        else:
+            return img, pid, camid, trackid, img_path[0]
+        
+        
+class ImageDatasetCameraAware(object):
+    def __init__(self, dataset, transform=None):
+        super(ImageDatasetCameraAware, self).__init__()
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img_path, pid, camid, img_index, accum_label = self.dataset[index]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            
+        return img, img_path, pid, camid, img_index, accum_label    
+   
+class ImageDatasetPreprocessor(Dataset):
+    def __init__(self, dataset, transform=None):
+        super(ImageDatasetPreprocessor, self).__init__()
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, indices):
+        img_path, pid, camid, trackid = self.dataset[indices]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            
+        return img, img_path, pid, camid, trackid, indices    
+    
+class ImageDatasetsecret(Dataset):
+    def __init__(self, dataset, transform=None):
+        super(ImageDatasetsecret, self).__init__()
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, indices):
+        img_path, pid, camid = self.dataset[indices]
+        img3 = read_image(img_path)
+
+        if self.transform is not None:
+            img = [self.transform(img) for img in img3]
+            
+        return img, img_path, pid, indices    
