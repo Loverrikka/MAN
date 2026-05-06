@@ -43,7 +43,6 @@ CUDA_VISIBLE_DEVICES=3 python train_net_sfda.py --config_file /data/MAN/configs/
 
 
 ## Citation
-If you find TOP-ReID useful in your research, please consider citing:
 ```bibtex
 @article{sheng2025multi,
   title={Multi-level alignment network for unsupervised domain adaptive multi-modality object re-identification},
@@ -53,7 +52,7 @@ If you find TOP-ReID useful in your research, please consider citing:
   year={2025},
   publisher={Elsevier}
 }
-
+```
 
 
 
